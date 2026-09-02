@@ -15,7 +15,7 @@ st.write(
     """
     An Agentic AI decision-support system combining
     **Linear Discriminant Analysis (LDA)** with a
-    **Gemini AI agent**.
+    **AI agent**.
 
     The AI agent can call the trained statistical model,
     analyse important profile characteristics and provide
@@ -155,7 +155,7 @@ with st.expander(
     st.markdown(
         """
         **1. Perceive**  
-        The Gemini agent receives the student's profile
+        The agent receives the student's profile
         and the user's question.
 
         **2. Reason**  
@@ -163,14 +163,14 @@ with st.expander(
         required.
 
         **3. Act**  
-        Gemini can call:
+        Agent can call:
 
         - `risk_prediction_tool` — trained LDA classifier
         - `risk_driver_tool` — LDA contribution analysis
         - `academic_support_tool` — support recommendations
 
         **4. Observe**  
-        The tool results are returned to Gemini.
+        The tool results are returned to the Agent.
 
         **5. Respond**  
         The agent interprets the statistical results and
