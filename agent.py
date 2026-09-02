@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 from google import genai
 from google.genai import types
@@ -7,7 +8,8 @@ from statistical_tools import (
     analyse_risk_drivers
 )
 
-#stats risk prediction
+
+# Statistical risk prediction tool
 def risk_prediction_tool(
     hours_studied: float,
     attendance: float,
@@ -19,17 +21,6 @@ def risk_prediction_tool(
     """
     Predict a student's academic risk using the trained
     Linear Discriminant Analysis model.
-
-    Args:
-        hours_studied: Student's weekly study hours.
-        attendance: Student attendance percentage.
-        sleep_hours: Average sleep hours.
-        previous_scores: Previous academic score.
-        tutoring_sessions: Number of tutoring sessions.
-        physical_activity: Physical activity level.
-
-    Returns:
-        Academic risk classification and probability.
     """
 
     profile = {
@@ -52,7 +43,7 @@ def risk_prediction_tool(
     }
 
 
-#lda driver
+# LDA driver analysis tool
 def risk_driver_tool(
     hours_studied: float,
     attendance: float,
@@ -64,10 +55,6 @@ def risk_driver_tool(
     """
     Identify the student's most influential profile
     characteristics according to the trained LDA model.
-
-    Returns:
-        Top three characteristics contributing most
-        strongly to the student's classification.
     """
 
     profile = {
@@ -84,15 +71,16 @@ def risk_driver_tool(
     output = []
 
     for _, row in drivers.iterrows():
+        contribution = float(row["Contribution"])
 
         output.append({
             "variable": row["Variable"],
-            "student_value": float(
-                row["Student_Value"]
-            ),
-            "lda_contribution": round(
-                float(row["Contribution"]),
-                3
+            "student_value": float(row["Student_Value"]),
+            "lda_contribution": round(contribution, 3),
+            "direction": (
+                "toward At Risk"
+                if contribution > 0
+                else "away from At Risk"
             )
         })
 
@@ -100,7 +88,8 @@ def risk_driver_tool(
         "top_drivers": output
     }
 
-#support
+
+# Academic support tool
 def academic_support_tool(
     hours_studied: float,
     attendance: float,
@@ -112,9 +101,6 @@ def academic_support_tool(
     """
     Generate practical academic support options based
     on the student's observed profile.
-
-    Returns:
-        A list of possible academic support actions.
     """
 
     recommendations = []
@@ -158,7 +144,8 @@ def academic_support_tool(
         "recommendations": recommendations
     }
 
-#gemini agent
+
+# Gemini Agent
 def run_student_agent(
     student_profile: dict,
     user_question: str
@@ -186,7 +173,7 @@ The user asks:
 
 You have access to statistical and academic-support tools.
 
-For questions about this student's risk, ALWAYS use the
+For questions about this student's risk, ALWAYS use
 risk_prediction_tool.
 
 When explaining why the student received a classification,
@@ -201,51 +188,43 @@ IMPORTANT:
 - Never invent a risk probability.
 - Risk probabilities must come from risk_prediction_tool.
 - Do not claim that predictors cause academic performance.
-- Describe them as statistical associations or model
-  characteristics.
+- Describe them as statistical associations or model characteristics.
+- When discussing LDA contributions, distinguish whether a
+  characteristic pushes toward or away from the At Risk class.
 - Explain results in clear language suitable for a student.
 - The model is a decision-support demonstration, not an
   official institutional failure classification.
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            tools=[
-                risk_prediction_tool,
-                risk_driver_tool,
-                academic_support_tool
-            ],
-            temperature=0.2
-        )
-    )
+    # Retry Gemini automatically if the service is temporarily overloaded
+    for attempt in range(3):
 
-    return response.text
-
- #auto retry if server unavailable
-import time
-for attempt in range(3):
-    try:
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                tools=[
-                    risk_prediction_tool,
-                    risk_driver_tool,
-                    academic_support_tool
-                ],
-                temperature=0.2
+        try:
+            response = client.models.generate_content(
+                model="gemini-3.6-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    tools=[
+                        risk_prediction_tool,
+                        risk_driver_tool,
+                        academic_support_tool
+                    ],
+                    temperature=0.2
+                )
             )
-        )
 
-        return response.text
+            return response.text
 
-    except Exception as error:
-        if "503" in str(error) or "UNAVAILABLE" in str(error):
-            if attempt < 2:
-                time.sleep(3)
-                continue
+        except Exception as error:
 
-        raise error
+            error_message = str(error)
+
+            if (
+                "503" in error_message
+                or "UNAVAILABLE" in error_message
+            ):
+                if attempt < 2:
+                    time.sleep(3)
+                    continue
+
+            raise error
