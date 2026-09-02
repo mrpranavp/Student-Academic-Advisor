@@ -6,33 +6,7 @@ from statistical_tools import (
     predict_student_risk,
     analyse_risk_drivers
 )
-#auto retry if server unavailable
-import time
-for attempt in range(3):
-    try:
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                tools=[
-                    risk_prediction_tool,
-                    risk_driver_tool,
-                    academic_support_tool
-                ],
-                temperature=0.2
-            )
-        )
 
-        return response.text
-
-    except Exception as error:
-        if "503" in str(error) or "UNAVAILABLE" in str(error):
-            if attempt < 2:
-                time.sleep(3)
-                continue
-
-        raise error
-        
 #stats risk prediction
 def risk_prediction_tool(
     hours_studied: float,
@@ -248,3 +222,30 @@ IMPORTANT:
     )
 
     return response.text
+
+ #auto retry if server unavailable
+import time
+for attempt in range(3):
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                tools=[
+                    risk_prediction_tool,
+                    risk_driver_tool,
+                    academic_support_tool
+                ],
+                temperature=0.2
+            )
+        )
+
+        return response.text
+
+    except Exception as error:
+        if "503" in str(error) or "UNAVAILABLE" in str(error):
+            if attempt < 2:
+                time.sleep(3)
+                continue
+
+        raise error
